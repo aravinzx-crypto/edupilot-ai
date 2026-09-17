@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block title %}EduPilot AI — Study smarter with EduPilot AI — Your Personal Study Companion{% endblock %}
+
+{% block public_content %}
+<!-- Hero Section -->
+<section class="hero-section">
+  <div class="container hero-grid">
+    <div class="hero-text-col">
+      <div class="hero-tagline-badge">
+        <span class="badge badge-gold">
+          <span>✨</span> College Study Companion
+        </span>
+      </div>
+      <h1 class="hero-title">
+        Study smarter with <span>EduPilot AI</span> — Your Personal Study Companion
+      </h1>
+      <p class="hero-problem">
+        Many college students struggle to manage their studies effectively due to academic pressure, limited time, difficulty understanding complex topics, and lack of personalized learning support. EduPilot AI bridges this gap with 24/7 personalized academic guidance.
+      </p>
+      <div class="hero-cta-group">
+        <a href="{{ url_for('signup_page') }}" class="btn btn-accent btn-lg">
+          Get Started Free
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"/>
+            <polyline points="12 5 19 12 12 19"/>
+          </svg>
+        </a>
+        <a href="{{ url_for('login_page') }}" class="btn btn-secondary btn-lg">
+          Log In to Account
+        </a>
+      </div>
+
+      <div class="hero-stats">
+        <div class="stat-item">
+          <h4>24/7</h4>
+          <p>Instant Academic Help</p>
+        </div>
+        <div class="stat-item">
+          <h4>100%</h4>
+          <p>Private to Your Account</p>
+        </div>
+        <div class="stat-item">
+          <h4>5-min</h4>
+          <p>Targeted Quizzes</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-visual-col">
+      <div class="hero-visual-card">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="width: 10px; height: 10px; border-radius: 50%; background: #EF4444;"></div>
+            <div style="width: 10px; height: 10px; border-radius: 50%; background: #F59E0B;"></div>
+            <div style="width: 10px; height: 10px; border-radius: 50%; background: #10B981;"></div>
+          </div>
+          <span class="badge badge-violet">Live Session Preview</span>
+        </div>
+
+        <div class="preview-bubble preview-bubble-user">
+          Can you explain recursion with a simple real-life analogy?
+        </div>
+
+        <div class="preview-bubble">
+          <div>🤖</div>
+          <div>
+            Think of recursion like Russian Matryoshka dolls! To reach the tiny solid doll inside (the <strong>base case</strong>), you keep opening each outer doll (the <strong>recursive step</strong>).
+          </div>
+        </div>
+
+        <div class="preview-stats-mini">
+          <div class="mini-stat-box">
+            <h5>Today: 2h 15m</h5>
+            <p>Calculus & Algorithms</p>
+          </div>
+          <div class="mini-stat-box">
+            <h5 style="color: var(--color-success);">Quiz: 80%</h5>
+            <p>Data Structures</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Objective & Problem Framing Banner -->
+<section class="problem-solution-section" id="about">
+  <div class="container">
+    <div class="statement-card">
+      <h3>The Objective</h3>
+      <p class="objective-text">
+        "The need for an intelligent, personalized study assistant that helps students understand difficult topics, manage their study schedules, and prepare effectively for examinations."
+      </p>
+      <div style="display: flex; align-items: center; gap: 10px; font-size: 0.95rem; color: #E0E7FF;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+          <polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+        <span>Designed specifically for collegiate pacing, coursework depth, and finals prep.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Feature Highlight Cards Section -->
+<section class="features-section" id="features">
+  <div class="container">
+    <div class="section-header">
+      <span class="badge badge-violet" style="margin-bottom: 12px;">Core Capabilities</span>
+      <h2>Everything You Need to Excel</h2>
+      <p>Built with purpose to transform college study habits into confident mastery.</p>
+    </div>
+
+    <div class="features-grid">
+      <!-- Card 1 -->
+      <div class="feature-card">
+        <div class="feature-icon-wrapper">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+        </div>
+        <h3>Private AI tutor</h3>
+        <p>Ask anything and get a simple, clear explanation. Break down complex college topics with patient, step-by-step guidance.</p>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="feature-card">
+        <div class="feature-icon-wrapper">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+        </div>
+        <h3>Study planner</h3>
+        <p>Sessions and deadlines in one calm timetable. Track daily study sessions, log subject hours, and stay ahead of exams.</p>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="feature-card">
+        <div class="feature-icon-wrapper">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+          </svg>
+        </div>
+        <h3>Instant summaries</h3>
+        <p>Turn dense notes into easy takeaways. Paste lectures or textbook sections to extract key bullet points, definitions, and flash facts.</p>
+      </div>
+
+      <!-- Card 4 -->
+      <div class="feature-card">
+        <div class="feature-icon-wrapper">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <polygon points="10 8 16 12 10 16 10 8"/>
+          </svg>
+        </div>
+        <h3>Smart quizzes</h3>
+        <p>Test your understanding and track progress. Generate interactive 5-question multiple choice tests on any subject with instant explanations.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Call to Action Section -->
+<section style="background: #ffffff; padding: 70px 0; border-top: 1px solid var(--color-border);" id="how-it-works">
+  <div class="container" style="text-align: center; max-width: 680px;">
+    <h2 style="font-size: 2.2rem; margin-bottom: 16px;">Ready to elevate your academic journey?</h2>
+    <p style="color: var(--color-text-muted); font-size: 1.05rem; margin-bottom: 30px;">
+      Join college students who study with clarity, keep their schedules organized, and master tough exams with EduPilot AI.
+    </p>
+    <div style="display: flex; justify-content: center; gap: 16px; flex-wrap: wrap;">
+      <a href="{{ url_for('signup_page') }}" class="btn btn-primary btn-lg">Create Free Account</a>
+      <a href="{{ url_for('login_page') }}" class="btn btn-secondary btn-lg">Sign In to Dashboard</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

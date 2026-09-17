@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}AI Study Tutor — EduPilot AI{% endblock %}
+{% block header_title %}Private AI Tutor{% endblock %}
+{% block header_subtitle %}Ask questions, break down complex topics, and get step-by-step guidance.{% endblock %}
+
+{% block content %}
+<div class="chat-container">
+  <div class="chat-header">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--color-violet); color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+        AI
+      </div>
+      <div>
+        <h3 style="font-size: 1rem; margin-bottom: 2px;">EduPilot Study Assistant</h3>
+        <p style="font-size: 0.78rem; color: #10B981; display: flex; align-items: center; gap: 4px;">
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: #10B981; display: inline-block;"></span> Online & Ready to Help
+        </p>
+      </div>
+    </div>
+
+    <div>
+      <button id="clearChatBtn" class="btn btn-secondary btn-sm" title="Clear chat history">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+        </svg>
+        <span>Clear History</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="chat-history" id="chatHistory">
+    {% for msg in messages %}
+      <div class="chat-bubble {{ msg.sender }}">
+        <div class="message-content">{{ msg.message | replace('\n', '<br>') | safe }}</div>
+        <div style="font-size: 0.7rem; opacity: 0.7; margin-top: 6px; text-align: right;">
+          {{ msg.created_at }}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="chat-prompts-bar">
+    <span style="font-size: 0.75rem; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase;">Suggested:</span>
+    <button class="prompt-chip" data-prompt="Can you explain recursion with a simple example?">🔄 Explain Recursion</button>
+    <button class="prompt-chip" data-prompt="What are the best study tips for active recall before college exams?">🎯 Exam Study Tips</button>
+    <button class="prompt-chip" data-prompt="Explain the difference between Arrays and Linked Lists.">📦 Data Structures</button>
+    <button class="prompt-chip" data-prompt="How do derivatives and integrals connect in Calculus?">📐 Calculus Guide</button>
+    <button class="prompt-chip" data-prompt="Explain supply and demand equilibrium and price elasticity.">📈 Economics</button>
+  </div>
+
+  <div class="chat-input-area">
+    <form id="chatForm" class="chat-form">
+      <input type="text" id="chatInput" class="form-control" placeholder="Ask your question or describe a concept you need help with..." required autocomplete="off">
+      <button type="submit" id="sendBtn" class="btn btn-primary" style="padding: 10px 24px;">
+        <span>Send</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"/>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const chatHistory = document.getElementById('chatHistory');
+const chatForm = document.getElementById('chatForm');
+const chatInput = document.getElementById('chatInput');
+const sendBtn = document.getElementById('sendBtn');
+const clearBtn = document.getElementById('clearChatBtn');
+
+function scrollToBottom() {
+  chatHistory.scrollTop = chatHistory.scrollHeight;
+}
+scrollToBottom();
+
+// Markdown-like parser for bold, headers, code
+function formatMessage(text) {
+  let formatted = text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/### (.*?)\n/g, '<h4 style="font-size: 1.05rem; margin: 10px 0 6px; color: var(--color-indigo);">$1</h4>')
+    .replace(/```python([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+    .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\n/g, '<br>');
+  return formatted;
+}
+
+chatForm.addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const message = chatInput.value.trim();
+  if (!message) return;
+
+  // Add User Bubble immediately
+  const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const userDiv = document.createElement('div');
+  userDiv.className = 'chat-bubble user';
+  userDiv.innerHTML = `
+    <div class="message-content">${message.replace(/\n/g, '<br>')}</div>
+    <div style="font-size: 0.7rem; opacity: 0.7; margin-top: 6px; text-align: right;">${now}</div>
+  `;
+  chatHistory.appendChild(userDiv);
+  chatInput.value = '';
+  scrollToBottom();
+
+  // Typing indicator bubble
+  const typingDiv = document.createElement('div');
+  typingDiv.className = 'chat-bubble ai';
+  typingDiv.id = 'typingBubble';
+  typingDiv.innerHTML = `<em>EduPilot is thinking...</em>`;
+  chatHistory.appendChild(typingDiv);
+  scrollToBottom();
+
+  sendBtn.disabled = true;
+
+  try {
+    const res = await apiCall('/api/chat/messages', 'POST', { message });
+    typingDiv.remove();
+
+    const aiDiv = document.createElement('div');
+    aiDiv.className = 'chat-bubble ai';
+    aiDiv.innerHTML = `
+      <div class="message-content">${formatMessage(res.response.message)}</div>
+      <div style="font-size: 0.7rem; opacity: 0.7; margin-top: 6px; text-align: right;">${now}</div>
+    `;
+    chatHistory.appendChild(aiDiv);
+    scrollToBottom();
+  } catch (err) {
+    typingDiv.remove();
+    showToast('Failed to get answer: ' + err.message, 'error');
+  } finally {
+    sendBtn.disabled = false;
+    chatInput.focus();
+  }
+});
+
+// Prompt Chips Handler
+document.querySelectorAll('.prompt-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    chatInput.value = chip.getAttribute('data-prompt');
+    chatForm.dispatchEvent(new Event('submit'));
+  });
+});
+
+// Clear Chat Handler
+clearBtn.addEventListener('click', async () => {
+  if (!confirm('Are you sure you want to clear your chat history?')) return;
+  try {
+    await apiCall('/api/chat/messages', 'DELETE');
+    chatHistory.innerHTML = `
+      <div class="chat-bubble ai">
+        <div class="message-content">Chat history cleared. How can I assist your studies today?</div>
+      </div>
+    `;
+    showToast('Chat history cleared.');
+  } catch (err) {
+    showToast('Could not clear chat: ' + err.message, 'error');
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}Smart Quiz Generator — EduPilot AI{% endblock %}
+{% block header_title %}Smart Quiz Generator{% endblock %}
+{% block header_subtitle %}Test your understanding with active recall and track your progress.{% endblock %}
+
+{% block content %}
+<div style="display: flex; flex-direction: column; gap: 28px;">
+  <!-- Quiz Launcher / Active Area -->
+  <div id="quizWorkspace">
+    <!-- Initial Prompt Card -->
+    <div class="card" id="quizPromptCard">
+      <div class="card-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="width: 32px; height: 32px; border-radius: 8px; background: var(--color-gold-soft); color: #B45309; display: flex; align-items: center; justify-content: center;">
+            ⚡
+          </div>
+          <h2 class="card-title">Generate a 5-Question Quiz</h2>
+        </div>
+      </div>
+
+      <p style="color: var(--color-text-muted); font-size: 0.95rem; margin-bottom: 20px;">
+        Choose any college subject or paste a specific exam topic (e.g. <em>Calculus</em>, <em>Data Structures</em>, <em>Economics</em>, <em>Biology</em>, <em>Organic Chemistry</em>). EduPilot AI will construct a tailored 5-question test with explanations.
+      </p>
+
+      <form id="startQuizForm">
+        <div class="form-group">
+          <label class="form-label" for="quizTopicInput">Topic or Exam Subject</label>
+          <input type="text" id="quizTopicInput" class="form-control" placeholder="e.g. Data Structures, Macroeconomics, Limits & Derivatives" required>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <span style="font-size: 0.8rem; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase;">Quick Subjects:</span>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
+            <button type="button" class="btn btn-secondary btn-sm quick-topic-btn" data-topic="Data Structures">Data Structures</button>
+            <button type="button" class="btn btn-secondary btn-sm quick-topic-btn" data-topic="Calculus">Calculus</button>
+            <button type="button" class="btn btn-secondary btn-sm quick-topic-btn" data-topic="Economics">Economics</button>
+            <button type="button" class="btn btn-secondary btn-sm quick-topic-btn" data-topic="Cellular Respiration">Biology</button>
+          </div>
+        </div>
+
+        <button type="submit" id="startQuizBtn" class="btn btn-accent btn-lg">
+          <span>Start Practice Quiz</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="5 3 19 12 5 21 5 3"/>
+          </svg>
+        </button>
+      </form>
+    </div>
+
+    <!-- Active Quiz Runner Container -->
+    <div id="activeQuizContainer" style="display: none;"></div>
+  </div>
+
+  <!-- Quiz History Table -->
+  <div class="card">
+    <div class="card-header">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <h2 class="card-title">Past Quiz Attempts</h2>
+        <span class="badge badge-violet">{{ quiz_history|length }} Completed</span>
+      </div>
+    </div>
+
+    {% if quiz_history %}
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.92rem;">
+          <thead>
+            <tr style="border-bottom: 2px solid var(--color-border); color: var(--color-text-muted); font-size: 0.82rem; text-transform: uppercase;">
+              <th style="padding: 12px 16px;">Topic</th>
+              <th style="padding: 12px 16px;">Score</th>
+              <th style="padding: 12px 16px;">Percentage</th>
+              <th style="padding: 12px 16px;">Date</th>
+              <th style="padding: 12px 16px;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for q in quiz_history %}
+              {% set pct = (q.score / q.total_questions * 100)|round|int %}
+              <tr style="border-bottom: 1px solid var(--color-border);">
+                <td style="padding: 14px 16px; font-weight: 600; color: var(--color-indigo);">{{ q.topic }}</td>
+                <td style="padding: 14px 16px;">{{ q.score }} / {{ q.total_questions }}</td>
+                <td style="padding: 14px 16px;">
+                  <span class="badge {% if pct >= 80 %}badge-success{% elif pct >= 50 %}badge-gold{% else %}badge-danger{% endif %}">
+                    {{ pct }}%
+                  </span>
+                </td>
+                <td style="padding: 14px 16px; color: var(--color-text-muted); font-size: 0.85rem;">{{ q.created_at }}</td>
+                <td style="padding: 14px 16px;">
+                  <button onclick="retakeQuiz('{{ q.topic }}')" class="btn btn-secondary btn-sm">Retake</button>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 36px 16px; color: var(--color-text-muted);">
+        <div style="font-size: 2rem; margin-bottom: 8px;">📊</div>
+        <p style="font-size: 0.95rem;">No quiz history yet. Generate your first quiz above to track your mastery!</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const quizRunner = new QuizRunner('activeQuizContainer');
+
+document.querySelectorAll('.quick-topic-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.getElementById('quizTopicInput').value = btn.getAttribute('data-topic');
+  });
+});
+
+document.getElementById('startQuizForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const topic = document.getElementById('quizTopicInput').value.trim();
+  const startBtn = document.getElementById('startQuizBtn');
+
+  if (!topic) return;
+
+  startBtn.disabled = true;
+  startBtn.innerHTML = '<span>Generating 5 Questions...</span>';
+
+  try {
+    const res = await apiCall('/api/quiz/generate', 'POST', { topic });
+    document.getElementById('quizPromptCard').style.display = 'none';
+    document.getElementById('activeQuizContainer').style.display = 'block';
+
+    quizRunner.start(res.topic, res.questions);
+  } catch (err) {
+    showToast('Failed to generate quiz: ' + err.message, 'error');
+    startBtn.disabled = false;
+    startBtn.innerHTML = '<span>Start Practice Quiz</span>';
+  }
+});
+
+function retakeQuiz(topic) {
+  document.getElementById('quizTopicInput').value = topic;
+  document.getElementById('startQuizForm').dispatchEvent(new Event('submit'));
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+{% endblock %}

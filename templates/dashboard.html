@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — EduPilot AI{% endblock %}
+{% block header_title %}Student Overview{% endblock %}
+{% block header_subtitle %}Welcome back, {{ current_user.name }}! Here is your study status.{% endblock %}
+
+{% block content %}
+<!-- Welcome & Quick Stats Banner -->
+<div class="metrics-row">
+  <!-- Today's Study Sessions -->
+  <div class="metric-card">
+    <div class="metric-icon" style="background: var(--color-violet-soft); color: var(--color-violet);">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+        <line x1="16" y1="2" x2="16" y2="6"/>
+        <line x1="8" y1="2" x2="8" y2="6"/>
+        <line x1="3" y1="10" x2="21" y2="10"/>
+      </svg>
+    </div>
+    <div class="metric-info">
+      <h3>{{ today_sessions|length }}</h3>
+      <p>Today's Study Sessions</p>
+    </div>
+  </div>
+
+  <!-- Recent Quiz Score -->
+  <div class="metric-card">
+    <div class="metric-icon" style="background: var(--color-gold-soft); color: #B45309;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <polygon points="10 8 16 12 10 16 10 8"/>
+      </svg>
+    </div>
+    <div class="metric-info">
+      {% if recent_quiz %}
+        <h3>{{ recent_quiz.score }}/{{ recent_quiz.total_questions }}</h3>
+        <p>Recent Quiz ({{ recent_quiz.topic }})</p>
+      {% else %}
+        <h3 style="font-size: 1.2rem; color: var(--color-text-muted);">None Yet</h3>
+        <p>Recent Quiz Score</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Weak Topics Needing Attention -->
+  <div class="metric-card">
+    <div class="metric-icon" style="background: var(--color-danger-soft); color: var(--color-danger);">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/>
+        <line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+    </div>
+    <div class="metric-info">
+      <h3>{{ weak_count }}</h3>
+      <p>Weak Topics to Review</p>
+    </div>
+  </div>
+
+  <!-- Total Study Logged -->
+  <div class="metric-card">
+    <div class="metric-icon" style="background: var(--color-success-soft); color: var(--color-success);">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <polyline points="12 6 12 12 16 14"/>
+      </svg>
+    </div>
+    <div class="metric-info">
+      <h3>{{ total_duration }}m</h3>
+      <p>Total Study Time Logged</p>
+    </div>
+  </div>
+</div>
+
+<!-- Main Dashboard Grid -->
+<div class="dashboard-grid">
+  <!-- Left Column: Today's Study Plan & Quick Actions -->
+  <div style="display: flex; flex-direction: column; gap: 24px;">
+    <!-- Today's Study Plan -->
+    <div class="card">
+      <div class="card-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <h2 class="card-title">Today's Study Plan</h2>
+          <span class="badge badge-violet">{{ today_sessions|length }} planned</span>
+        </div>
+        <a href="{{ url_for('planner_page') }}" class="btn btn-secondary btn-sm">+ Plan Session</a>
+      </div>
+
+      {% if today_sessions %}
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          {% for session in today_sessions %}
+            <div style="display: flex; align-items: flex-start; justify-content: space-between; padding: 14px; border-radius: var(--radius-md); background: var(--color-bg); border: 1px solid var(--color-border);" id="session-row-{{ session.id }}">
+              <div style="display: flex; align-items: flex-start; gap: 12px;">
+                <input type="checkbox" style="margin-top: 5px; width: 18px; height: 18px; accent-color: var(--color-violet); cursor: pointer;" 
+                       {% if session.completed %}checked{% endif %} 
+                       onchange="toggleSessionComplete({{ session.id }}, this)">
+                <div>
+                  <h4 style="font-size: 1rem; margin-bottom: 2px; {% if session.completed %}text-decoration: line-through; color: var(--color-text-muted);{% endif %}" id="session-title-{{ session.id }}">
+                    {{ session.subject }}
+                  </h4>
+                  <div style="font-size: 0.82rem; color: var(--color-text-muted);">
+                    <span>⏱️ {{ session.duration }} minutes</span>
+                    {% if session.notes %} • <span>{{ session.notes }}</span>{% endif %}
+                  </div>
+                </div>
+              </div>
+              <span class="badge {% if session.completed %}badge-success{% else %}badge-gold{% endif %}" id="session-status-{{ session.id }}">
+                {{ 'Completed' if session.completed else 'Pending' }}
+              </span>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div style="text-align: center; padding: 32px 16px; color: var(--color-text-muted);">
+          <div style="font-size: 2.2rem; margin-bottom: 8px;">📖</div>
+          <h4 style="font-size: 1.1rem; color: var(--color-indigo); margin-bottom: 6px;">No study sessions scheduled for today</h4>
+          <p style="font-size: 0.88rem; margin-bottom: 16px;">Set up a focused session to keep your exam preparation steady.</p>
+          <a href="{{ url_for('planner_page') }}" class="btn btn-primary btn-sm">Create Today's Schedule</a>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Quick-Access Action Launchpad -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Quick Action Launchpad</h2>
+      </div>
+      <p style="font-size: 0.88rem; color: var(--color-text-muted); margin-bottom: 14px;">
+        Instantly jump into study tools designed for your coursework.
+      </p>
+      <div class="quick-launchpad">
+        <a href="{{ url_for('chat_page') }}" class="launch-btn">
+          <div style="font-size: 1.6rem;">🤖</div>
+          <span>AI Tutor Chat</span>
+        </a>
+        <a href="{{ url_for('planner_page') }}" class="launch-btn">
+          <div style="font-size: 1.6rem;">📅</div>
+          <span>Study Planner</span>
+        </a>
+        <a href="{{ url_for('quiz_page') }}" class="launch-btn">
+          <div style="font-size: 1.6rem;">⚡</div>
+          <span>Quiz Generator</span>
+        </a>
+        <a href="{{ url_for('notes_page') }}" class="launch-btn">
+          <div style="font-size: 1.6rem;">📝</div>
+          <span>AI Notes</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Column: Recent Quiz & Academic Insights -->
+  <div style="display: flex; flex-direction: column; gap: 24px;">
+    <!-- Recent Quiz Performance -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Recent Quiz Performance</h2>
+        <a href="{{ url_for('quiz_page') }}" class="btn btn-secondary btn-sm">Take Quiz</a>
+      </div>
+      {% if recent_quiz %}
+        {% set pct = (recent_quiz.score / recent_quiz.total_questions * 100)|round|int %}
+        <div style="text-align: center; padding: 18px 0;">
+          <div style="font-size: 2.8rem; font-weight: 800; color: {% if pct >= 70 %}var(--color-success){% else %}#B45309{% endif %};">
+            {{ pct }}%
+          </div>
+          <h4 style="font-size: 1.05rem; margin-top: 4px;">{{ recent_quiz.topic }}</h4>
+          <p style="font-size: 0.82rem; color: var(--color-text-muted);">
+            Score: {{ recent_quiz.score }} / {{ recent_quiz.total_questions }} correct
+          </p>
+        </div>
+      {% else %}
+        <div style="text-align: center; padding: 24px 10px; color: var(--color-text-muted);">
+          <div style="font-size: 2rem; margin-bottom: 8px;">🎯</div>
+          <p style="font-size: 0.9rem; margin-bottom: 12px;">No quizzes taken yet. Test your knowledge on any topic now.</p>
+          <a href="{{ url_for('quiz_page') }}" class="btn btn-accent btn-sm">Generate 5-min Quiz</a>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Weak Topics Snapshot -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Weak Topics Status</h2>
+        <a href="{{ url_for('weak_topics_page') }}" class="btn btn-secondary btn-sm">Manage</a>
+      </div>
+      {% if weak_count > 0 %}
+        <div style="padding: 10px 0;">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+            <span class="badge badge-danger">⚠️ {{ weak_count }} Topics Need Attention</span>
+          </div>
+          <p style="font-size: 0.88rem; color: var(--color-text-muted); margin-bottom: 16px;">
+            Targeting weak areas with active recall gives the highest score boost before finals.
+          </p>
+          <a href="{{ url_for('weak_topics_page') }}" class="btn btn-primary btn-sm btn-block">Review Weak Topics</a>
+        </div>
+      {% else %}
+        <div style="text-align: center; padding: 20px 10px; color: var(--color-text-muted);">
+          <div style="font-size: 1.8rem; margin-bottom: 6px;">✨</div>
+          <p style="font-size: 0.9rem; color: #065F46; font-weight: 600;">All logged topics are in great shape!</p>
+          <p style="font-size: 0.8rem; margin-top: 4px;">Found a tough concept in lectures? Add it to stay organized.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function toggleSessionComplete(sessionId, checkbox) {
+  try {
+    const res = await apiCall(`/api/planner/sessions/${sessionId}/toggle`, 'PATCH');
+    const titleEl = document.getElementById(`session-title-` + sessionId);
+    const statusEl = document.getElementById(`session-status-` + sessionId);
+
+    if (res.completed) {
+      titleEl.style.textDecoration = 'line-through';
+      titleEl.style.color = 'var(--color-text-muted)';
+      statusEl.className = 'badge badge-success';
+      statusEl.textContent = 'Completed';
+      showToast('Session marked as completed! 🎉');
+    } else {
+      titleEl.style.textDecoration = 'none';
+      titleEl.style.color = 'var(--color-text-main)';
+      statusEl.className = 'badge badge-gold';
+      statusEl.textContent = 'Pending';
+      showToast('Session set to pending.');
+    }
+  } catch (err) {
+    checkbox.checked = !checkbox.checked;
+    showToast('Failed to update session: ' + err.message, 'error');
+  }
+}
+</script>
+{% endblock %}

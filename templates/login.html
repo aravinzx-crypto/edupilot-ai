@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Log In — EduPilot AI{% endblock %}
+
+{% block public_content %}
+<div class="auth-wrapper">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div style="display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 12px; background: var(--color-violet-soft); color: var(--color-violet); margin-bottom: 12px;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+          <polyline points="10 17 15 12 10 7"/>
+          <line x1="15" y1="12" x2="3" y2="12"/>
+        </svg>
+      </div>
+      <h2>Welcome Back</h2>
+      <p>Log in to access your study planner, notes, and AI tutor.</p>
+    </div>
+
+    <div id="loginError" style="display: none; background: var(--color-danger-soft); color: var(--color-danger); padding: 12px; border-radius: var(--radius-md); font-size: 0.88rem; margin-bottom: 18px; border: 1px solid rgba(239, 68, 68, 0.2);"></div>
+
+    <form id="loginForm" novalidate>
+      <input type="hidden" id="nextUrl" value="{{ next or '' }}">
+
+      <div class="form-group">
+        <label class="form-label" for="loginEmail">Email Address</label>
+        <input type="email" id="loginEmail" name="email" class="form-control" placeholder="student@university.edu" required>
+        <span class="form-error-msg" id="loginEmailError"></span>
+      </div>
+
+      <div class="form-group">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <label class="form-label" for="loginPassword" style="margin-bottom: 0;">Password</label>
+          <a href="{{ url_for('forgot_password_page') }}" style="font-size: 0.82rem; font-weight: 600; color: var(--color-violet);">Forgot password?</a>
+        </div>
+        <input type="password" id="loginPassword" name="password" class="form-control" placeholder="••••••••" required>
+        <span class="form-error-msg" id="loginPasswordError"></span>
+      </div>
+
+      <button type="submit" id="loginBtn" class="btn btn-primary btn-block btn-lg" style="margin-top: 10px;">
+        <span>Log In</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="5" y1="12" x2="19" y2="12"/>
+          <polyline points="12 5 19 12 12 19"/>
+        </svg>
+      </button>
+    </form>
+
+    <div class="demo-login-box">
+      <strong>🚀 Quick Testing Helper:</strong>
+      <p style="margin: 4px 0 10px; color: #78350F;">Don't have an account yet? Click below to instantly test with a demo student account:</p>
+      <button type="button" id="demoStudentBtn" class="btn btn-accent btn-sm" style="width: 100%;">
+        Sign In as Demo Student (Alex Chen)
+      </button>
+    </div>
+
+    <div style="text-align: center; margin-top: 24px; font-size: 0.9rem; color: var(--color-text-muted);">
+      Don't have an account? <a href="{{ url_for('signup_page') }}" style="font-weight: 600; color: var(--color-violet);">Create free account</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Login Submission
+document.getElementById('loginForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+
+  const emailInput = document.getElementById('loginEmail');
+  const passwordInput = document.getElementById('loginPassword');
+  const errorDiv = document.getElementById('loginError');
+  const loginBtn = document.getElementById('loginBtn');
+  const next = document.getElementById('nextUrl').value;
+
+  errorDiv.style.display = 'none';
+
+  const email = emailInput.value.trim();
+  const password = passwordInput.value;
+
+  if (!email || !password) {
+    errorDiv.textContent = 'Please fill in both email and password.';
+    errorDiv.style.display = 'block';
+    return;
+  }
+
+  loginBtn.disabled = true;
+  loginBtn.innerHTML = '<span>Logging in...</span>';
+
+  try {
+    const res = await apiCall(`/api/auth/login${next ? '?next=' + encodeURIComponent(next) : ''}`, 'POST', {
+      email,
+      password
+    });
+
+    showToast('Login successful! Redirecting...', 'success');
+    setTimeout(() => {
+      window.location.href = res.redirect || '/dashboard';
+    }, 400);
+
+  } catch (err) {
+    loginBtn.disabled = false;
+    loginBtn.innerHTML = '<span>Log In</span>';
+    errorDiv.textContent = err.message || 'Invalid credentials. Please try again.';
+    errorDiv.style.display = 'block';
+  }
+});
+
+// Demo Account Auto-Creator / Sign-In
+document.getElementById('demoStudentBtn').addEventListener('click', async function() {
+  const btn = this;
+  btn.disabled = true;
+  btn.textContent = 'Preparing demo account...';
+
+  // Attempt login first
+  try {
+    const res = await apiCall('/api/auth/login', 'POST', {
+      email: 'demo@edupilot.ai',
+      password: 'demostudent123'
+    });
+    window.location.href = res.redirect || '/dashboard';
+    return;
+  } catch (err) {
+    // If demo user does not exist yet, create it!
+  }
+
+  try {
+    const signupRes = await apiCall('/api/auth/signup', 'POST', {
+      name: 'Alex Chen',
+      email: 'demo@edupilot.ai',
+      password: 'demostudent123',
+      confirm_password: 'demostudent123'
+    });
+    window.location.href = signupRes.redirect || '/dashboard';
+  } catch (e) {
+    showToast('Failed to initialize demo student: ' + e.message, 'error');
+    btn.disabled = false;
+    btn.textContent = 'Sign In as Demo Student (Alex Chen)';
+  }
+});
+</script>
+{% endblock %}

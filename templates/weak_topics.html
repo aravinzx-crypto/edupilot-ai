@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block title %}Weak Topics Tracker — EduPilot AI{% endblock %}
+{% block header_title %}Weak Topics Tracker{% endblock %}
+{% block header_subtitle %}Identify concepts you struggle with and convert them into mastered strengths.{% endblock %}
+
+{% block content %}
+<div style="display: grid; grid-template-columns: 360px 1fr; gap: 24px; align-items: start;">
+  <!-- Add Weak Topic Form -->
+  <div class="card">
+    <div class="card-header">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <div style="width: 32px; height: 32px; border-radius: 8px; background: var(--color-danger-soft); color: var(--color-danger); display: flex; align-items: center; justify-content: center;">
+          ⚠️
+        </div>
+        <h2 class="card-title">Add Weak Topic</h2>
+      </div>
+    </div>
+
+    <form id="addWeakTopicForm">
+      <div class="form-group">
+        <label class="form-label" for="topicName">Topic / Subject</label>
+        <input type="text" id="topicName" class="form-control" placeholder="e.g. Dynamic Programming, Organic Reaction Mechanisms" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="topicReason">Reason / Difficult Point</label>
+        <textarea id="topicReason" class="form-control" placeholder="Why does this feel confusing? (e.g. Always confuse memoization table dimensions, or forget resonance structures)" rows="4" required></textarea>
+      </div>
+
+      <button type="submit" id="addTopicBtn" class="btn btn-primary btn-block">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        <span>Track Weak Topic</span>
+      </button>
+    </form>
+  </div>
+
+  <!-- Weak Topics List -->
+  <div class="card">
+    <div class="card-header">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <h2 class="card-title">Struggling Topics & Improvement Log</h2>
+        <span class="badge badge-violet" id="topicsCount">{{ topics|length }} Tracked</span>
+      </div>
+    </div>
+
+    <div id="topicsList" style="display: flex; flex-direction: column; gap: 14px;">
+      {% if topics %}
+        {% for t in topics %}
+          <div class="card" id="topic-card-{{ t.id }}" style="background: #ffffff; border: 1px solid var(--color-border); padding: 20px; box-shadow: var(--shadow-sm);">
+            <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 10px;">
+              <div>
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+                  <h3 style="font-size: 1.15rem; color: var(--color-indigo);">{{ t.topic }}</h3>
+                  <span class="badge {% if t.status == 'Mastered' %}badge-success{% else %}badge-danger{% endif %}" id="status-badge-{{ t.id }}">
+                    {{ t.status }}
+                  </span>
+                </div>
+                <p style="font-size: 0.9rem; color: var(--color-text-main); margin-bottom: 8px;">
+                  <strong>Difficulty reason:</strong> {{ t.reason }}
+                </p>
+                <div style="font-size: 0.78rem; color: var(--color-text-muted);">
+                  Added on {{ t.created_at }}
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 8px;">
+                <button onclick="toggleMastery({{ t.id }}, '{{ t.status }}')" class="btn btn-secondary btn-sm" id="mastery-btn-{{ t.id }}">
+                  {{ 'Reopen' if t.status == 'Mastered' else '✓ Mastered' }}
+                </button>
+                <button onclick="deleteWeakTopic({{ t.id }})" class="btn btn-ghost btn-sm" style="color: var(--color-danger);" title="Delete topic">
+                  🗑️
+                </button>
+              </div>
+            </div>
+
+            <!-- Action buttons for practicing -->
+            <div style="display: flex; gap: 10px; padding-top: 12px; border-top: 1px dashed var(--color-border); margin-top: 10px;">
+              <a href="{{ url_for('chat_page') }}" class="btn btn-secondary btn-sm">
+                🤖 Ask AI Tutor to Explain
+              </a>
+              <button onclick="practiceQuiz('{{ t.topic }}')" class="btn btn-accent btn-sm">
+                ⚡ Quiz This Topic
+              </button>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div id="noTopicsMessage" style="text-align: center; padding: 40px 16px; color: var(--color-text-muted);">
+          <div style="font-size: 2.2rem; margin-bottom: 10px;">🎯</div>
+          <h4 style="font-size: 1.15rem; color: var(--color-indigo); margin-bottom: 6px;">No weak topics logged</h4>
+          <p style="font-size: 0.9rem;">Whenever you encounter a tricky theorem, formula, or lecture point, add it here to turn it into a high-scoring strength.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('addWeakTopicForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const topic = document.getElementById('topicName').value.trim();
+  const reason = document.getElementById('topicReason').value.trim();
+  const btn = document.getElementById('addTopicBtn');
+
+  if (!topic || !reason) return;
+
+  btn.disabled = true;
+
+  try {
+    await apiCall('/api/weak-topics', 'POST', { topic, reason });
+    showToast('Weak topic added to your review schedule!');
+    window.location.reload();
+  } catch (err) {
+    showToast('Failed to track topic: ' + err.message, 'error');
+    btn.disabled = false;
+  }
+});
+
+async function toggleMastery(topicId, currentStatus) {
+  const newStatus = currentStatus === 'Mastered' ? 'Needs Review' : 'Mastered';
+  try {
+    await apiCall(`/api/weak-topics/${topicId}/status`, 'PATCH', { status: newStatus });
+    showToast(`Topic marked as ${newStatus}!`);
+    window.location.reload();
+  } catch (err) {
+    showToast('Failed to update status: ' + err.message, 'error');
+  }
+}
+
+async function deleteWeakTopic(topicId) {
+  if (!confirm('Are you sure you want to remove this topic?')) return;
+  try {
+    await apiCall(`/api/weak-topics/${topicId}`, 'DELETE');
+    const el = document.getElementById(`topic-card-${topicId}`);
+    if (el) el.remove();
+    showToast('Topic removed.');
+  } catch (err) {
+    showToast('Failed to delete: ' + err.message, 'error');
+  }
+}
+
+function practiceQuiz(topic) {
+  sessionStorage.setItem('preferredQuizTopic', topic);
+  window.location.href = "{{ url_for('quiz_page') }}";
+}
+</script>
+{% endblock %}

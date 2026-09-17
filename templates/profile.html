@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}Settings & Profile — EduPilot AI{% endblock %}
+{% block header_title %}Settings & Profile{% endblock %}
+{% block header_subtitle %}Manage your personal account preferences and credentials.{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px;">
+  <!-- Profile Information Card -->
+  <div class="card">
+    <div class="card-header">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <div style="width: 32px; height: 32px; border-radius: 8px; background: var(--color-violet-soft); color: var(--color-violet); display: flex; align-items: center; justify-content: center;">
+          👤
+        </div>
+        <h2 class="card-title">Student Profile</h2>
+      </div>
+    </div>
+
+    <form id="profileForm">
+      <div class="form-group">
+        <label class="form-label" for="profileName">Full Name</label>
+        <input type="text" id="profileName" class="form-control" value="{{ current_user.name }}" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="profileEmail">Email Address</label>
+        <input type="email" id="profileEmail" class="form-control" value="{{ current_user.email }}" disabled style="background: #F1F5F9; cursor: not-allowed;">
+        <span style="font-size: 0.78rem; color: var(--color-text-muted);">Email cannot be changed directly for security purposes.</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="preferredLanguage">Preferred Study Language</label>
+        <select id="preferredLanguage" class="form-control">
+          <option value="English" {% if current_user.preferred_language == 'English' %}selected{% endif %}>English (Default)</option>
+          <option value="Spanish" {% if current_user.preferred_language == 'Spanish' %}selected{% endif %}>Spanish (Español)</option>
+          <option value="French" {% if current_user.preferred_language == 'French' %}selected{% endif %}>French (Français)</option>
+          <option value="German" {% if current_user.preferred_language == 'German' %}selected{% endif %}>German (Deutsch)</option>
+          <option value="Hindi" {% if current_user.preferred_language == 'Hindi' %}selected{% endif %}>Hindi (हिंदी)</option>
+          <option value="Mandarin" {% if current_user.preferred_language == 'Mandarin' %}selected{% endif %}>Mandarin (中文)</option>
+        </select>
+        <span style="font-size: 0.78rem; color: var(--color-text-muted);">The AI tutor adapts phrasing and explanations to your chosen preference.</span>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end;">
+        <button type="submit" id="saveProfileBtn" class="btn btn-primary">
+          Save Profile Changes
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Password Management Card -->
+  <div class="card">
+    <div class="card-header">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <div style="width: 32px; height: 32px; border-radius: 8px; background: var(--color-gold-soft); color: #B45309; display: flex; align-items: center; justify-content: center;">
+          🔒
+        </div>
+        <h2 class="card-title">Change Password</h2>
+      </div>
+    </div>
+
+    <form id="changePasswordForm">
+      <div class="form-group">
+        <label class="form-label" for="currentPassword">Current Password</label>
+        <input type="password" id="currentPassword" class="form-control" placeholder="••••••••" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="newPassword">New Password (minimum 6 characters)</label>
+        <input type="password" id="newPassword" class="form-control" placeholder="••••••••" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="confirmNewPassword">Confirm New Password</label>
+        <input type="password" id="confirmNewPassword" class="form-control" placeholder="••••••••" required>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end;">
+        <button type="submit" id="updatePasswordBtn" class="btn btn-secondary">
+          Update Password
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Security & Privacy Banner -->
+  <div style="background: var(--color-violet-soft); border-radius: var(--radius-lg); padding: 20px; border: 1px solid rgba(108, 99, 255, 0.2); display: flex; align-items: center; gap: 16px;">
+    <div style="font-size: 2rem;">🛡️</div>
+    <div>
+      <h4 style="font-size: 1rem; color: var(--color-indigo); margin-bottom: 2px;">Account Privacy & Data Isolation</h4>
+      <p style="font-size: 0.85rem; color: var(--color-text-muted);">
+        All study records, quiz results, notes, and AI tutor conversations are encrypted and strictly isolated to user ID <strong>#{{ current_user.id }}</strong>.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Profile Update
+document.getElementById('profileForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const name = document.getElementById('profileName').value.trim();
+  const preferred_language = document.getElementById('preferredLanguage').value;
+  const btn = document.getElementById('saveProfileBtn');
+
+  if (!name) return;
+
+  btn.disabled = true;
+
+  try {
+    const res = await apiCall('/api/profile', 'PATCH', { name, preferred_language });
+    showToast('Profile updated successfully!');
+    setTimeout(() => window.location.reload(), 600);
+  } catch (err) {
+    showToast('Failed to update profile: ' + err.message, 'error');
+    btn.disabled = false;
+  }
+});
+
+// Password Change
+document.getElementById('changePasswordForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const current_password = document.getElementById('currentPassword').value;
+  const new_password = document.getElementById('newPassword').value;
+  const confirm_new_password = document.getElementById('confirmNewPassword').value;
+  const btn = document.getElementById('updatePasswordBtn');
+
+  if (!current_password || !new_password) return;
+
+  if (new_password.length < 6) {
+    showToast('New password must be at least 6 characters long.', 'error');
+    return;
+  }
+
+  if (new_password !== confirm_new_password) {
+    showToast('New passwords do not match.', 'error');
+    return;
+  }
+
+  btn.disabled = true;
+
+  try {
+    const res = await apiCall('/api/profile/change-password', 'POST', {
+      current_password,
+      new_password,
+      confirm_new_password
+    });
+    showToast('Password updated successfully! 🎉');
+    document.getElementById('changePasswordForm').reset();
+  } catch (err) {
+    showToast('Password change failed: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+});
+</script>
+{% endblock %}

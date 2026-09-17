@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block title %}Study Planner — EduPilot AI{% endblock %}
+{% block header_title %}Study Planner{% endblock %}
+{% block header_subtitle %}Sessions and deadlines organized in one calm timetable.{% endblock %}
+
+{% block content %}
+<div style="display: grid; grid-template-columns: 360px 1fr; gap: 24px; align-items: start;">
+  <!-- Add Session Card -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Schedule Study Session</h2>
+    </div>
+
+    <form id="addSessionForm">
+      <div class="form-group">
+        <label class="form-label" for="sessionSubject">Subject / Course Name</label>
+        <input type="text" id="sessionSubject" class="form-control" placeholder="e.g. CS 201: Algorithms" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="sessionDate">Date</label>
+        <input type="date" id="sessionDate" class="form-control" value="{{ today }}" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="sessionDuration">Duration (minutes)</label>
+        <input type="number" id="sessionDuration" class="form-control" placeholder="e.g. 45" min="5" max="480" value="45" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="sessionNotes">Notes / Focus Goals (Optional)</label>
+        <textarea id="sessionNotes" class="form-control" placeholder="Chapters to review, specific problem sets, or flashcard deck..." rows="3"></textarea>
+      </div>
+
+      <button type="submit" id="addSessionBtn" class="btn btn-primary btn-block">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        <span>Add to Schedule</span>
+      </button>
+    </form>
+  </div>
+
+  <!-- Saved Sessions List -->
+  <div class="card">
+    <div class="card-header">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <h2 class="card-title">Your Study Timetable</h2>
+        <span class="badge badge-violet" id="sessionsCount">{{ sessions|length }} Sessions</span>
+      </div>
+
+      <div style="display: flex; gap: 8px;">
+        <button class="btn btn-secondary btn-sm" id="filterAllBtn" onclick="filterSessions('all')">All</button>
+        <button class="btn btn-ghost btn-sm" id="filterPendingBtn" onclick="filterSessions('pending')">Pending</button>
+        <button class="btn btn-ghost btn-sm" id="filterCompletedBtn" onclick="filterSessions('completed')">Done</button>
+      </div>
+    </div>
+
+    <div id="sessionsList" style="display: flex; flex-direction: column; gap: 12px;">
+      {% if sessions %}
+        {% for s in sessions %}
+          <div class="session-card-item" data-completed="{{ 'true' if s.completed else 'false' }}" id="session-card-{{ s.id }}" style="display: flex; align-items: center; justify-content: space-between; padding: 16px; border-radius: var(--radius-md); background: #ffffff; border: 1px solid var(--color-border); box-shadow: var(--shadow-sm);">
+            <div style="display: flex; align-items: center; gap: 14px;">
+              <input type="checkbox" style="width: 20px; height: 20px; accent-color: var(--color-violet); cursor: pointer;" 
+                     {% if s.completed %}checked{% endif %} 
+                     onchange="togglePlannerSession({{ s.id }}, this)">
+              <div>
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 2px;">
+                  <h4 style="font-size: 1.05rem; {% if s.completed %}text-decoration: line-through; color: var(--color-text-muted);{% endif %}" id="session-title-{{ s.id }}">
+                    {{ s.subject }}
+                  </h4>
+                  <span class="badge {% if s.completed %}badge-success{% else %}badge-gold{% endif %}" id="session-badge-{{ s.id }}">
+                    {{ 'Done' if s.completed else 'Scheduled' }}
+                  </span>
+                </div>
+                <div style="font-size: 0.85rem; color: var(--color-text-muted); display: flex; gap: 14px; flex-wrap: wrap;">
+                  <span>📅 {{ s.date }}</span>
+                  <span>⏱️ {{ s.duration }} mins</span>
+                  {% if s.notes %}
+                    <span>📝 {{ s.notes }}</span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <button onclick="deletePlannerSession({{ s.id }})" class="btn btn-ghost btn-sm" style="color: var(--color-danger); padding: 6px;" title="Delete session">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              </svg>
+            </button>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div id="noSessionsMessage" style="text-align: center; padding: 40px 16px; color: var(--color-text-muted);">
+          <div style="font-size: 2.2rem; margin-bottom: 10px;">🗓️</div>
+          <h4 style="font-size: 1.15rem; color: var(--color-indigo); margin-bottom: 6px;">No study sessions scheduled</h4>
+          <p style="font-size: 0.9rem;">Fill out the form on the left to add your first study session.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Add Session Handler
+document.getElementById('addSessionForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const subject = document.getElementById('sessionSubject').value.trim();
+  const date = document.getElementById('sessionDate').value;
+  const duration = document.getElementById('sessionDuration').value;
+  const notes = document.getElementById('sessionNotes').value.trim();
+  const addBtn = document.getElementById('addSessionBtn');
+
+  if (!subject || !date || !duration) return;
+
+  addBtn.disabled = true;
+
+  try {
+    const res = await apiCall('/api/planner/sessions', 'POST', {
+      subject,
+      date,
+      duration: parseInt(duration),
+      notes
+    });
+
+    showToast('Study session scheduled successfully!');
+    // Reload page to display fresh session or prepend
+    window.location.reload();
+  } catch (err) {
+    showToast('Failed to schedule session: ' + err.message, 'error');
+    addBtn.disabled = false;
+  }
+});
+
+// Toggle Session Completion
+async function togglePlannerSession(sessionId, checkbox) {
+  try {
+    const res = await apiCall(`/api/planner/sessions/${sessionId}/toggle`, 'PATCH');
+    const title = document.getElementById(`session-title-${sessionId}`);
+    const badge = document.getElementById(`session-badge-${sessionId}`);
+    const card = document.getElementById(`session-card-${sessionId}`);
+
+    if (res.completed) {
+      title.style.textDecoration = 'line-through';
+      title.style.color = 'var(--color-text-muted)';
+      badge.className = 'badge badge-success';
+      badge.textContent = 'Done';
+      card.setAttribute('data-completed', 'true');
+      showToast('Session completed! Keep up the momentum! ✨');
+    } else {
+      title.style.textDecoration = 'none';
+      title.style.color = 'var(--color-text-main)';
+      badge.className = 'badge badge-gold';
+      badge.textContent = 'Scheduled';
+      card.setAttribute('data-completed', 'false');
+      showToast('Session set back to scheduled.');
+    }
+  } catch (err) {
+    checkbox.checked = !checkbox.checked;
+    showToast('Error toggling session: ' + err.message, 'error');
+  }
+}
+
+// Delete Session
+async function deletePlannerSession(sessionId) {
+  if (!confirm('Are you sure you want to remove this study session?')) return;
+  try {
+    await apiCall(`/api/planner/sessions/${sessionId}`, 'DELETE');
+    const el = document.getElementById(`session-card-${sessionId}`);
+    if (el) el.remove();
+    showToast('Study session removed.');
+  } catch (err) {
+    showToast('Failed to delete: ' + err.message, 'error');
+  }
+}
+
+// Filter Sessions
+function filterSessions(type) {
+  const cards = document.querySelectorAll('.session-card-item');
+  cards.forEach(card => {
+    const isCompleted = card.getAttribute('data-completed') === 'true';
+    if (type === 'all') {
+      card.style.display = 'flex';
+    } else if (type === 'completed') {
+      card.style.display = isCompleted ? 'flex' : 'none';
+    } else if (type === 'pending') {
+      card.style.display = !isCompleted ? 'flex' : 'none';
+    }
+  });
+
+  document.querySelectorAll('#filterAllBtn, #filterPendingBtn, #filterCompletedBtn').forEach(b => {
+    b.className = 'btn btn-ghost btn-sm';
+  });
+  if (type === 'all') document.getElementById('filterAllBtn').className = 'btn btn-secondary btn-sm';
+  if (type === 'pending') document.getElementById('filterPendingBtn').className = 'btn btn-secondary btn-sm';
+  if (type === 'completed') document.getElementById('filterCompletedBtn').className = 'btn btn-secondary btn-sm';
+}
+</script>
+{% endblock %}
